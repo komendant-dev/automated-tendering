@@ -1,0 +1,83 @@
+@import model.Provider
+@import model.TenderResult
+@import java.util.Locale
+@import java.text.NumberFormat
+@(tenderResults: Seq[TenderResult] = Seq(),
+        aggregatedResult: Map[Provider, Long] = Map(),
+        errors: Seq[String] = Seq())(implicit request: RequestHeader)
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>CSV File Upload</title>
+        <style>
+                table {
+                    border-collapse: collapse;
+                }
+
+                th, td {
+                    border: 1px solid black;
+                    padding: 8px !important;
+                    text-align: left;
+                }
+
+                table tr:nth-child(2) {
+                    background-color: #9dff9d;
+                }
+        </style>
+    </head>
+    <body>
+        <h3>Please, upload you shipments CSV file.</h3>
+        <div>
+            <p>------------------------------------------------------------------------------------------------------------</p>
+            <p>CSV file requirements:</p>
+            <ul>
+                <li>The file should be without header row (only values)</li>
+                <li>The file should have the following structure: shipment_id,country_code,weight</li>
+                <li>The file size should be less than 50MB</li>
+            </ul>
+            <p>------------------------------------------------------------------------------------------------------------</p>
+        </div>
+        <form action="@routes.TenderController.processFile()" method="post" enctype="multipart/form-data">
+            <input type="file" name="csvFile" accept=".csv"/>
+            <button type="submit">Upload</button>
+        </form>
+        @if(errors.nonEmpty) {
+            <p style="color: red">The file couldn't be processed due to the following errors:</p>
+            <ul>
+            @for(error <- errors) {
+                <li>@error</li>
+            }
+            </ul>
+        } else {
+            @if(tenderResults.nonEmpty) {
+                <p style="color: green">The file has been successfully processed.</p>
+                <h3>Tender results:</h3>
+                <p>=====================================================================================</p>
+                <p>Best provider overall: <b>@aggregatedResult.toSeq.minBy(_._2)._1.name</b></p>
+                <table>
+                    <th>Costs comparison:</th>
+                    @for((provider, cost) <- aggregatedResult.toSeq.sortBy(_._2)) {
+                        <tr>
+                            <td>@NumberFormat.getInstance(Locale.US).format(cost) Euros</td>
+                            <td>@provider.name</td>
+                        </tr>
+                    }
+                </table>
+                <p>=====================================================================================</p>
+                @for(tenderResult <- tenderResults) {
+                    <p>Best provider for shipping to @tenderResult.country.name: <b>@tenderResult.cheapestOption.get._1.name</b></p>
+                    <table>
+                        <th>Costs comparison:</th>
+                        @for((provider, cost) <- tenderResult.result.toSeq.sortBy(_._2)) {
+                            <tr>
+                                <td>@NumberFormat.getInstance(Locale.US).format(cost) Euros</td>
+                                <td>@provider.name</td>
+                            </tr>
+                        }
+                    </table>
+                    <p>=====================================================================================</p>
+                }
+            }
+        }
+    </body>
+</html>

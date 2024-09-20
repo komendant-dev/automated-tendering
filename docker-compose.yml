@@ -1,0 +1,12 @@
+services:
+  app:
+    restart: unless-stopped
+    build:
+      context: .
+      args:
+        - project_path=${CONTAINER_PROJECT_DIR}
+    image: automated-tendering-test-task
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./:${CONTAINER_PROJECT_DIR}
